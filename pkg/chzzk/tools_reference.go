@@ -41,12 +41,7 @@ func handleListAPIs(_ context.Context, _ *mcp.CallToolRequest, input ListAPIsInp
 			}
 		}
 		if len(filtered) == 0 {
-			return &mcp.CallToolResult{
-				IsError: true,
-				Content: []mcp.Content{&mcp.TextContent{
-					Text: fmt.Sprintf("알 수 없는 카테고리: %q. 사용 가능한 카테고리: auth, user, channel, category, live, chat, session, drops, restriction", input.Category),
-				}},
-			}, nil, nil
+			return errorResult(fmt.Sprintf("알 수 없는 카테고리: %q. 사용 가능한 카테고리: auth, user, channel, category, live, chat, session, drops, restriction", input.Category)), nil, nil
 		}
 	}
 
@@ -68,9 +63,7 @@ func handleListAPIs(_ context.Context, _ *mcp.CallToolRequest, input ListAPIsInp
 		Endpoints: grouped,
 	}
 	b, _ := json.MarshalIndent(out, "", "  ")
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(b)}},
-	}, nil, nil
+	return textResult(string(b)), nil, nil
 }
 
 // ─── chzzk_get_api_spec ───────────────────────────────────────────────────────
@@ -112,16 +105,11 @@ func handleGetAPISpec(_ context.Context, _ *mcp.CallToolRequest, input GetAPISpe
 		if len(suggestions) > 0 {
 			msg += "\n\n유사한 엔드포인트:\n  " + strings.Join(suggestions, "\n  ")
 		}
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{&mcp.TextContent{Text: msg}},
-		}, nil, nil
+		return errorResult(msg), nil, nil
 	}
 
 	b, _ := json.MarshalIndent(ep, "", "  ")
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: string(b)}},
-	}, nil, nil
+	return textResult(string(b)), nil, nil
 }
 
 // RegisterReferenceTools adds reference tools to the MCP server.
