@@ -2,7 +2,10 @@
 
 치지직(Chzzk) Open API 연동 서비스 개발을 돕는 MCP(Model Context Protocol) 서버.
 
-Claude 등 MCP 클라이언트에서 Chzzk API 레퍼런스를 조회하고, Go/TypeScript 연동 코드를 즉시 생성할 수 있습니다.
+Claude 등 MCP 클라이언트에서 두 가지 방식으로 개발 속도를 높입니다.
+
+- **API 레퍼런스 조회** — 엔드포인트·파라미터·응답 스펙을 문서 없이 즉시 확인
+- **코드 생성** — OAuth2 인증 플로우, 타입 안전 HTTP 클라이언트, 프로젝트 스캐폴드를 언어별로 즉시 생성
 
 ## 제공 도구
 
@@ -17,6 +20,14 @@ Claude 등 MCP 클라이언트에서 Chzzk API 레퍼런스를 조회하고, Go/
 지원 언어: **Go**, **TypeScript**
 
 ## 설치
+
+**go install** (권장)
+
+```bash
+go install github.com/chanuuuu/chzzk-api-mcp-server/cmd/chzzk-mcp-server@latest
+```
+
+**소스 빌드**
 
 ```bash
 git clone https://github.com/chanuuuu/chzzk-api-mcp-server
@@ -71,6 +82,11 @@ chzzk_scaffold_project(language: "go", project_name: "my-chzzk-bot", features: [
 
 - Base URL: `https://openapi.chzzk.naver.com`
 - 공식 문서: https://chzzk.gitbook.io/chzzk
+
+## Roadmap
+
+- [ ] **WebSocket / 실시간 이벤트** — 채팅·후원·구독 이벤트를 수신하는 WebSocket 클라이언트 코드 생성 (`session` API 연동)
+- [ ] **Python 지원** — Go/TypeScript 외 Python 클라이언트 코드 생성
 
 ## 개발
 

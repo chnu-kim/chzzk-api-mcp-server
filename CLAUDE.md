@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 개요
 
-치지직(Chzzk) Open API 연동 서비스 개발을 돕는 **코드 생성 MCP 서버**. 런타임에 Chzzk API를 직접 호출하지 않고, API 레퍼런스 데이터를 내장해 조회·코드 생성 기능을 MCP 도구로 제공한다.
+치지직(Chzzk) Open API 연동 서비스 개발을 돕는 MCP 서버. 두 기능이 동등하게 핵심이다:
+
+- **API 레퍼런스 조회** — 36개 엔드포인트 데이터를 내장해 파라미터·응답 스펙을 즉시 반환
+- **코드 생성** — OAuth2 인증 플로우, 타입 안전 HTTP 클라이언트, 프로젝트 스캐폴드 생성 (Go/TypeScript)
+
+런타임에 Chzzk API를 직접 호출하지 않는다. 모든 데이터는 `api_reference.go`에 정적으로 내장되어 있다.
 
 ## 주요 명령어
 
