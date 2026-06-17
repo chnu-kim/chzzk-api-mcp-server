@@ -43,10 +43,13 @@ pkg/chzzk/
                                카테고리별 조회(EndpointsByCategory), 키 조회(FindEndpoint).
                                새 엔드포인트는 여기에만 추가하면 된다.
   server.go                    NewMCPServer() — RegisterReferenceTools + RegisterCodegenTools 호출.
+  helpers.go                   textResult, errorResult 공유 헬퍼.
   tools_reference.go           chzzk_list_apis, chzzk_get_api_spec 핸들러 + 등록 함수.
   tools_codegen.go             chzzk_generate_auth_code, chzzk_generate_api_client,
                                chzzk_scaffold_project 핸들러 + 등록 함수.
-                               코드 생성 로직(authCodeGo, apiClientGo, scaffoldGo 등)도 포함.
+  codegen_auth.go              OAuth2 코드 생성 로직 + 템플릿 (Go/TypeScript).
+  codegen_client.go            API 클라이언트 코드 생성 로직 + 템플릿 + 네이밍 헬퍼.
+  codegen_scaffold.go          프로젝트 스캐폴드 코드 생성 로직 + 템플릿.
 ```
 
 ## 도구 등록 패턴
@@ -69,7 +72,7 @@ func handleMyTool(_ context.Context, _ *mcp.CallToolRequest, input MyToolInput) 
 mcp.AddTool(s, &mcp.Tool{Name: "chzzk_my_tool", Description: "..."}, handleMyTool)
 ```
 
-`textResult()` / `errorResult()` 헬퍼는 `tools_codegen.go`에 정의되어 있다.
+`textResult()` / `errorResult()` 헬퍼는 `helpers.go`에 정의되어 있다.
 
 ## 코드 컨벤션
 
