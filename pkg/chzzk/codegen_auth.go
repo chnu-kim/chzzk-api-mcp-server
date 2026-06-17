@@ -9,20 +9,20 @@ func authCodeGo() string {
 package auth
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 )
 
 const (
-	baseURL   = "https://openapi.chzzk.naver.com"
-	authURL   = "https://chzzk.naver.com/account-interlock"
-	tokenPath = "/auth/v1/token"
+	baseURL    = "https://openapi.chzzk.naver.com"
+	authURL    = "https://chzzk.naver.com/account-interlock"
+	tokenPath  = "/auth/v1/token"
 	revokePath = "/auth/v1/token/revoke"
 )
 
@@ -69,42 +69,47 @@ func (c Config) AuthorizationURL(state string) string {
 }
 
 // ExchangeCode exchanges an authorization code for tokens.
+// state must echo the value sent in AuthorizationURL (Chzzk API requirement).
 func (c Config) ExchangeCode(ctx context.Context, code, state string) (*TokenResponse, error) {
-	return postToken(ctx, url.Values{
-		"grantType":    {"authorization_code"},
-		"clientId":     {c.ClientID},
-		"clientSecret": {c.ClientSecret},
-		"code":         {code},
-		"state":        {state},
+	return postToken(ctx, map[string]string{
+		"grantType":    "authorization_code",
+		"clientId":     c.ClientID,
+		"clientSecret": c.ClientSecret,
+		"code":         code,
+		"state":        state,
 	})
 }
 
 // RefreshToken uses a refresh token to obtain a new access token.
 func (c Config) RefreshToken(ctx context.Context, refreshToken string) (*TokenResponse, error) {
-	return postToken(ctx, url.Values{
-		"grantType":    {"refresh_token"},
-		"clientId":     {c.ClientID},
-		"clientSecret": {c.ClientSecret},
-		"refreshToken": {refreshToken},
+	return postToken(ctx, map[string]string{
+		"grantType":    "refresh_token",
+		"clientId":     c.ClientID,
+		"clientSecret": c.ClientSecret,
+		"refreshToken": refreshToken,
 	})
 }
 
 // RevokeToken invalidates the given token.
 func (c Config) RevokeToken(ctx context.Context, token, tokenTypeHint string) error {
-	data := url.Values{
-		"clientId":     {c.ClientID},
-		"clientSecret": {c.ClientSecret},
-		"token":        {token},
+	data := map[string]string{
+		"clientId":     c.ClientID,
+		"clientSecret": c.ClientSecret,
+		"token":        token,
 	}
 	if tokenTypeHint != "" {
-		data.Set("tokenTypeHint", tokenTypeHint)
+		data["tokenTypeHint"] = tokenTypeHint
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+revokePath,
-		strings.NewReader(data.Encode()))
+	body, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+revokePath,
+		bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -116,13 +121,17 @@ func (c Config) RevokeToken(ctx context.Context, token, tokenTypeHint string) er
 	return nil
 }
 
-func postToken(ctx context.Context, data url.Values) (*TokenResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+tokenPath,
-		strings.NewReader(data.Encode()))
+func postToken(ctx context.Context, data map[string]string) (*TokenResponse, error) {
+	body, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+tokenPath,
+		bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -191,6 +200,7 @@ func (cs *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request)
 }
 
 func authCodeTypeScript() string {
+	bt := "`"
 	return `// Chzzk OAuth2 authentication helpers
 // Required environment variables:
 //   CHZZK_CLIENT_ID     - 애플리케이션 클라이언트 ID
@@ -211,6 +221,14 @@ export interface TokenResponse {
   refreshToken: string;
   tokenType: string;
   expiresIn: number;
+  scopes: string[];
+}
+
+interface RawTokenContent {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number | string;
   scope?: string;
 }
 
@@ -240,22 +258,23 @@ export function buildAuthorizationURL(config: ChzzkAuthConfig, state: string): s
     redirectUri: config.redirectUri,
     state,
   });
-  return ` + "`" + `${AUTH_URL}?${params}` + "`" + `;
+  return ` + bt + `${AUTH_URL}?${params}` + bt + `;
 }
 
-/** Exchanges an authorization code for tokens. */
+/** Exchanges an authorization code for tokens.
+ *  state must echo the value sent in buildAuthorizationURL (Chzzk API requirement). */
 export async function exchangeCode(
   config: ChzzkAuthConfig,
   code: string,
   state: string
 ): Promise<TokenResponse> {
-  return postToken(new URLSearchParams({
+  return postToken({
     grantType: "authorization_code",
     clientId: config.clientId,
     clientSecret: config.clientSecret,
     code,
     state,
-  }));
+  });
 }
 
 /** Uses a refresh token to obtain a new access token. */
@@ -263,12 +282,12 @@ export async function refreshAccessToken(
   config: ChzzkAuthConfig,
   refreshToken: string
 ): Promise<TokenResponse> {
-  return postToken(new URLSearchParams({
+  return postToken({
     grantType: "refresh_token",
     clientId: config.clientId,
     clientSecret: config.clientSecret,
     refreshToken,
-  }));
+  });
 }
 
 /** Invalidates the given token. */
@@ -277,32 +296,42 @@ export async function revokeToken(
   token: string,
   tokenTypeHint?: "access_token" | "refresh_token"
 ): Promise<void> {
-  const params = new URLSearchParams({
+  const body: Record<string, string> = {
     clientId: config.clientId,
     clientSecret: config.clientSecret,
     token,
-  });
-  if (tokenTypeHint) params.set("tokenTypeHint", tokenTypeHint);
+  };
+  if (tokenTypeHint) body.tokenTypeHint = tokenTypeHint;
 
-  const res = await fetch(` + "`" + `${BASE_URL}/auth/v1/token/revoke` + "`" + `, {
+  const res = await fetch(` + bt + `${BASE_URL}/auth/v1/token/revoke` + bt + `, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(` + "`" + `Revoke token failed: ${res.status}` + "`" + `);
+  const data: ApiResponse<unknown> = await res.json();
+  if (data.code !== 200) {
+    throw new Error(` + bt + `Revoke token failed ${data.code}: ${data.message}` + bt + `);
+  }
 }
 
-async function postToken(params: URLSearchParams): Promise<TokenResponse> {
-  const res = await fetch(` + "`" + `${BASE_URL}/auth/v1/token` + "`" + `, {
+async function postToken(params: Record<string, string>): Promise<TokenResponse> {
+  const res = await fetch(` + bt + `${BASE_URL}/auth/v1/token` + bt + `, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
   });
-  const data: ApiResponse<TokenResponse> = await res.json();
+  const data: ApiResponse<RawTokenContent> = await res.json();
   if (data.code !== 200) {
-    throw new Error(` + "`" + `Token error ${data.code}: ${data.message}` + "`" + `);
+    throw new Error(` + bt + `Token error ${data.code}: ${data.message}` + bt + `);
   }
-  return data.content;
+  const { accessToken, refreshToken, tokenType, expiresIn, scope } = data.content;
+  return {
+    accessToken,
+    refreshToken,
+    tokenType,
+    expiresIn: Number(expiresIn),
+    scopes: scope ? scope.split(" ") : [],
+  };
 }
 
 // ── Token persistence example (Node.js) ─────────────────────────────────────
