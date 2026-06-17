@@ -71,6 +71,18 @@ mcp.AddTool(s, &mcp.Tool{Name: "chzzk_my_tool", Description: "..."}, handleMyToo
 
 `textResult()` / `errorResult()` 헬퍼는 `tools_codegen.go`에 정의되어 있다.
 
+## 코드 컨벤션
+
+이 프로젝트의 코드 컨벤션 정전(canonical source). 새 도구·핸들러는 아래 규칙을 따른다.
+
+- **MCP 도구 이름** — `chzzk_verb_noun` (소문자 + 언더스코어). 예: `chzzk_list_apis`
+- **핸들러 함수명** — `handleVerbNoun` (unexported camelCase). 예: `handleListApis`
+- **Input 구조체명** — `VerbNounInput`. 예: `ListApisInput`
+- **Register 함수명** — `RegisterXxxTools(s *mcp.Server)`. 예: `RegisterReferenceTools`
+- **성공/오류 응답** — 직접 `&mcp.CallToolResult{...}`를 구성하지 말고 `textResult()` / `errorResult()` 헬퍼를 쓴다
+- **jsonschema 태그** — 모든 Input 필드에 jsonschema 태그를 달고, 설명은 **한국어**로 쓴다
+- **코드 내 코멘트** — 최소화한다. WHY가 비명백한 경우에만 단다 (WHAT을 반복하는 코멘트 금지)
+
 ## Go 코드 내 백틱(`) 처리
 
 TypeScript 템플릿 리터럴(`` `${...}` ``)을 Go 문자열에 포함할 때는 `bt := "` `` `` `"` 변수를 사용한다 (Go raw string 안에 backtick을 넣을 수 없기 때문):
