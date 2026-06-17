@@ -153,6 +153,5 @@ func scaffoldTypeScript(projectName string, features map[string]bool) string {
 	// run
 	sb.WriteString("## 실행\n\n```bash\nnpm install\nnpm run dev\n```\n")
 
-	_ = bt // used above
 	return sb.String()
 }

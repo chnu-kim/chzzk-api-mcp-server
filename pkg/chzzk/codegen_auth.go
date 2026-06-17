@@ -190,8 +190,6 @@ func (cs *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request)
 `
 }
 
-// ─── TypeScript auth code ─────────────────────────────────────────────────────
-
 func authCodeTypeScript() string {
 	return `// Chzzk OAuth2 authentication helpers
 // Required environment variables:

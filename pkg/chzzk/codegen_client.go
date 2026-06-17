@@ -125,7 +125,7 @@ func goMethodForEndpoint(ep Endpoint) string {
 	var optParams []string
 	for _, p := range ep.QueryParams {
 		if !p.Required {
-			optParams = append(optParams, fmt.Sprintf("%s %s", goParamName(p.Name), goOptType(p.Type)))
+			optParams = append(optParams, fmt.Sprintf("%s %s", goParamName(p.Name), goType(p.Type)))
 		}
 	}
 	params = append(params, optParams...)
@@ -196,8 +196,6 @@ func goMethodForEndpoint(ep Endpoint) string {
 
 	return sb.String()
 }
-
-// ─── TypeScript API client ────────────────────────────────────────────────────
 
 func apiClientTypeScript(eps []Endpoint) string {
 	var sb strings.Builder
@@ -271,7 +269,7 @@ func tsMethodForEndpoint(ep Endpoint) string {
 	// interfaces
 	if len(ep.Response) > 0 {
 		sb.WriteString(fmt.Sprintf("  // %s\n", ep.Description))
-		iName := tsInterfaceName(ep) + "Response"
+		iName := goMethodName(ep) + "Response"
 		sb.WriteString(fmt.Sprintf("  // Response type: %s\n", iName))
 	}
 
@@ -281,18 +279,18 @@ func tsMethodForEndpoint(ep Endpoint) string {
 	var params []string
 	for _, p := range ep.QueryParams {
 		if p.Required {
-			params = append(params, fmt.Sprintf("%s: %s", tsParamName(p.Name), tsType(p.Type)))
+			params = append(params, fmt.Sprintf("%s: %s", goParamName(p.Name), tsType(p.Type)))
 		}
 	}
 	for _, p := range ep.BodyParams {
 		if p.Required {
-			params = append(params, fmt.Sprintf("%s: %s", tsParamName(p.Name), tsType(p.Type)))
+			params = append(params, fmt.Sprintf("%s: %s", goParamName(p.Name), tsType(p.Type)))
 		}
 	}
 	var optParams []string
 	for _, p := range ep.QueryParams {
 		if !p.Required {
-			optParams = append(optParams, fmt.Sprintf("%s?: %s", tsParamName(p.Name), tsType(p.Type)))
+			optParams = append(optParams, fmt.Sprintf("%s?: %s", goParamName(p.Name), tsType(p.Type)))
 		}
 	}
 	params = append(params, optParams...)
@@ -301,7 +299,7 @@ func tsMethodForEndpoint(ep Endpoint) string {
 
 	retType := "void"
 	if len(ep.Response) > 0 {
-		retType = tsInterfaceName(ep) + "Response"
+		retType = goMethodName(ep) + "Response"
 	}
 	sb.WriteString(fmt.Sprintf("): Promise<%s> {\n", retType))
 
@@ -309,7 +307,7 @@ func tsMethodForEndpoint(ep Endpoint) string {
 	if len(ep.QueryParams) > 0 {
 		sb.WriteString("    const query: Record<string, string | number> = {};\n")
 		for _, p := range ep.QueryParams {
-			pn := tsParamName(p.Name)
+			pn := goParamName(p.Name)
 			cleanName := strings.TrimSuffix(p.Name, "[]")
 			if p.Required {
 				sb.WriteString(fmt.Sprintf("    query[%q] = %s;\n", cleanName, pn))
@@ -323,8 +321,8 @@ func tsMethodForEndpoint(ep Endpoint) string {
 	if len(ep.BodyParams) > 0 {
 		var bodyFields []string
 		for _, p := range ep.BodyParams {
-			pn := tsParamName(p.Name)
-			bodyFields = append(bodyFields, fmt.Sprintf("%s: %s", tsParamName(p.Name), pn))
+			pn := goParamName(p.Name)
+			bodyFields = append(bodyFields, fmt.Sprintf("%s: %s", pn, pn))
 		}
 		bodyStr = "{ " + strings.Join(bodyFields, ", ") + " }"
 	}
@@ -379,8 +377,7 @@ func goFieldName(s string) string {
 			continue
 		}
 		p = strings.ToUpper(p[:1]) + p[1:]
-		// common Go acronyms
-		switch strings.ToUpper(p) {
+		switch p {
 		case "Id":
 			p = "ID"
 		case "Url":
@@ -422,19 +419,6 @@ func goType(t string) string {
 	}
 }
 
-func goOptType(t string) string {
-	switch t {
-	case "int", "long":
-		return "int"
-	case "bool":
-		return "bool"
-	case "string[]":
-		return "[]string"
-	default:
-		return "string"
-	}
-}
-
 func goZero(t string) string {
 	switch t {
 	case "int", "long":
@@ -452,14 +436,6 @@ func tsMethodName(ep Endpoint) string {
 		return "call"
 	}
 	return strings.ToLower(name[:1]) + name[1:]
-}
-
-func tsInterfaceName(ep Endpoint) string {
-	return goMethodName(ep)
-}
-
-func tsParamName(s string) string {
-	return goParamName(s)
 }
 
 func tsType(t string) string {
