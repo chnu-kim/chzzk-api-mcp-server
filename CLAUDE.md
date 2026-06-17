@@ -76,8 +76,8 @@ mcp.AddTool(s, &mcp.Tool{Name: "chzzk_my_tool", Description: "..."}, handleMyToo
 이 프로젝트의 코드 컨벤션 정전(canonical source). 새 도구·핸들러는 아래 규칙을 따른다.
 
 - **MCP 도구 이름** — `chzzk_verb_noun` (소문자 + 언더스코어). 예: `chzzk_list_apis`
-- **핸들러 함수명** — `handleVerbNoun` (unexported camelCase). 예: `handleListApis`
-- **Input 구조체명** — `VerbNounInput`. 예: `ListApisInput`
+- **핸들러 함수명** — `handleVerbNoun` (unexported camelCase). 예: `handleListAPIs` (두문자어는 Go 표준에 따라 전체 대문자: API, URL, ID)
+- **Input 구조체명** — `VerbNounInput`. 예: `ListAPIsInput`
 - **Register 함수명** — `RegisterXxxTools(s *mcp.Server)`. 예: `RegisterReferenceTools`
 - **성공/오류 응답** — 직접 `&mcp.CallToolResult{...}`를 구성하지 말고 `textResult()` / `errorResult()` 헬퍼를 쓴다
 - **jsonschema 태그** — 모든 Input 필드에 jsonschema 태그를 달고, 설명은 **한국어**로 쓴다
