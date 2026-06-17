@@ -29,6 +29,8 @@ func TestHandleGenerateAuthCode_Go(t *testing.T) {
 		"AuthorizationURL",
 		"CHZZK_CLIENT_ID",
 		"CHZZK_CLIENT_SECRET",
+		// Content-Type: JSON 전송
+		"application/json",
 	} {
 		if !strings.Contains(code, want) {
 			t.Errorf("generated Go auth code missing %q", want)
@@ -54,6 +56,12 @@ func TestHandleGenerateAuthCode_TypeScript(t *testing.T) {
 			"revokeToken",
 			"buildAuthorizationURL",
 			"CHZZK_CLIENT_ID",
+			// Content-Type: JSON 전송
+			"application/json",
+			// expiresIn: API가 String 반환 가능 → Number 정규화
+			"Number(",
+			// scope: 공백 구분 문자열 → 배열
+			"split(",
 		} {
 			if !strings.Contains(code, want) {
 				t.Errorf("lang=%s: generated TS auth code missing %q", lang, want)
