@@ -92,6 +92,7 @@ func handleScaffoldProject(_ context.Context, _ *mcp.CallToolRequest, input Scaf
 	}
 }
 
+// RegisterCodegenTools adds code generation tools to the MCP server.
 func RegisterCodegenTools(s *mcp.Server) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name: "chzzk_generate_auth_code",
