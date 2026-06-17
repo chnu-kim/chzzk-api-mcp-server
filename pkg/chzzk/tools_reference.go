@@ -62,7 +62,10 @@ func handleListAPIs(_ context.Context, _ *mcp.CallToolRequest, input ListAPIsInp
 		Total:     len(filtered),
 		Endpoints: grouped,
 	}
-	b, _ := json.MarshalIndent(out, "", "  ")
+	b, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return errorResult("응답 직렬화 오류: " + err.Error()), nil, nil
+	}
 	return textResult(string(b)), nil, nil
 }
 
@@ -108,7 +111,10 @@ func handleGetAPISpec(_ context.Context, _ *mcp.CallToolRequest, input GetAPISpe
 		return errorResult(msg), nil, nil
 	}
 
-	b, _ := json.MarshalIndent(ep, "", "  ")
+	b, err := json.MarshalIndent(ep, "", "  ")
+	if err != nil {
+		return errorResult("응답 직렬화 오류: " + err.Error()), nil, nil
+	}
 	return textResult(string(b)), nil, nil
 }
 
