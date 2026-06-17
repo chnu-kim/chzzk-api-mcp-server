@@ -62,6 +62,8 @@ func TestHandleGenerateAuthCode_TypeScript(t *testing.T) {
 			"Number(",
 			// scope: 공백 구분 문자열 → 배열
 			"split(",
+			// revokeToken이 HTTP status뿐 아니라 API envelope code도 검사
+			"ApiResponse<unknown>",
 		} {
 			if !strings.Contains(code, want) {
 				t.Errorf("lang=%s: generated TS auth code missing %q", lang, want)

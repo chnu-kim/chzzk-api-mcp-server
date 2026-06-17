@@ -308,7 +308,10 @@ export async function revokeToken(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(` + bt + `Revoke token failed: ${res.status}` + bt + `);
+  const data: ApiResponse<unknown> = await res.json();
+  if (data.code !== 200) {
+    throw new Error(` + bt + `Revoke token failed ${data.code}: ${data.message}` + bt + `);
+  }
 }
 
 async function postToken(params: Record<string, string>): Promise<TokenResponse> {
