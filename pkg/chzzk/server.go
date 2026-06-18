@@ -13,7 +13,7 @@ func NewMCPServer() *mcp.Server {
 		Name:    ServerName,
 		Version: ServerVersion,
 	}, &mcp.ServerOptions{
-		Instructions: "치지직(Chzzk) Open API 연동 서비스 개발을 돕는 코드 생성 MCP 서버입니다. " +
+		Instructions: "치지직(Chzzk) Open API 연동 서비스 개발을 돕는 API 레퍼런스 조회 및 코드 생성 MCP 서버입니다. " +
 			"API 레퍼런스 조회(chzzk_list_apis, chzzk_get_api_spec)와 " +
 			"코드 생성(chzzk_generate_auth_code, chzzk_generate_api_client, chzzk_scaffold_project)을 지원합니다.",
 	})
