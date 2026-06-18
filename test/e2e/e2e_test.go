@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chanuuuu/chzzk-api-mcp-server/pkg/chzzk"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -24,8 +25,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("tmpdir: " + err.Error())
 	}
-	defer os.RemoveAll(dir)
-
 	serverBin = filepath.Join(dir, "chzzk-mcp-server")
 	cmd := exec.Command("go", "build", "-o", serverBin,
 		"github.com/chanuuuu/chzzk-api-mcp-server/cmd/chzzk-mcp-server")
@@ -35,7 +34,9 @@ func TestMain(m *testing.M) {
 		panic("go build: " + err.Error())
 	}
 
-	os.Exit(m.Run())
+	code := m.Run()
+	os.RemoveAll(dir)
+	os.Exit(code)
 }
 
 func connect(t *testing.T) *mcp.ClientSession {
@@ -54,12 +55,8 @@ func connect(t *testing.T) *mcp.ClientSession {
 func TestInitialize(t *testing.T) {
 	session := connect(t)
 	res := session.InitializeResult()
-	if res == nil || res.ServerInfo == nil {
-		t.Fatal("ServerInfo is nil")
-	}
-	const want = "chzzk-api-mcp-server"
-	if res.ServerInfo.Name != want {
-		t.Errorf("ServerInfo.Name = %q, want %q", res.ServerInfo.Name, want)
+	if res.ServerInfo.Name != chzzk.ServerName {
+		t.Errorf("ServerInfo.Name = %q, want %q", res.ServerInfo.Name, chzzk.ServerName)
 	}
 }
 
@@ -96,23 +93,16 @@ func TestCallTool_ListAPIs(t *testing.T) {
 // TestStdinEOF_ExitsClean — stdin EOF 시 서버가 exit code 0으로 종료하는지 검증.
 func TestStdinEOF_ExitsClean(t *testing.T) {
 	cmd := exec.Command(serverBin, "stdio")
+	cmd.Stdout = io.Discard
 	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		cmd.Process.Kill() //nolint
-		cmd.Wait()         //nolint
-	})
+	t.Cleanup(func() { cmd.Process.Kill() }) //nolint
 
-	go io.Copy(io.Discard, stdout)
 	stdin.Close()
 
 	done := make(chan error, 1)
