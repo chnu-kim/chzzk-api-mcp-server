@@ -370,11 +370,14 @@ func goFieldName(s string) string {
 			continue
 		}
 		p = strings.ToUpper(p[:1]) + p[1:]
-		switch p {
-		case "Id":
-			p = "ID"
-		case "Url":
-			p = "URL"
+		// camelCase suffix normalization (e.g. "channelId" → "ChannelID")
+		switch {
+		case strings.HasSuffix(p, "Ids"):
+			p = p[:len(p)-3] + "IDs"
+		case strings.HasSuffix(p, "Id"):
+			p = p[:len(p)-2] + "ID"
+		case strings.HasSuffix(p, "Url"):
+			p = p[:len(p)-3] + "URL"
 		}
 		sb.WriteString(p)
 	}
@@ -389,7 +392,8 @@ func goParamName(s string) string {
 		return s
 	}
 	var sb strings.Builder
-	sb.WriteString(strings.ToLower(parts[0]))
+	first := parts[0]
+	sb.WriteString(strings.ToLower(first[:1]) + first[1:]) // 첫 글자만 소문자 (camelCase 보존)
 	for _, p := range parts[1:] {
 		if p == "" {
 			continue
