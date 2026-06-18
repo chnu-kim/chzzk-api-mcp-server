@@ -80,7 +80,6 @@ func handleGetAPISpec(_ context.Context, _ *mcp.CallToolRequest, input GetAPISpe
 
 	ep, ok := FindEndpoint(key)
 	if !ok {
-		// try case-insensitive prefix match
 		upper := strings.ToUpper(key)
 		for _, e := range AllEndpoints {
 			if strings.ToUpper(e.Key()) == upper {
@@ -92,7 +91,6 @@ func handleGetAPISpec(_ context.Context, _ *mcp.CallToolRequest, input GetAPISpe
 	}
 
 	if !ok {
-		// suggest close matches
 		var suggestions []string
 		parts := strings.SplitN(key, " ", 2)
 		searchPath := ""
