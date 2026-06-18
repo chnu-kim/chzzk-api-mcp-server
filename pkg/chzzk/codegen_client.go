@@ -91,7 +91,6 @@ func goMethodForEndpoint(ep Endpoint) string {
 	name := goMethodName(ep)
 	useToken := ep.AuthType == AuthTypeAccessToken
 
-	// struct definitions
 	if len(ep.Response) > 0 {
 		sb.WriteString(fmt.Sprintf("// %s is the response from %s %s.\n", name+"Response", ep.Method, ep.Path))
 		sb.WriteString(fmt.Sprintf("type %sResponse struct {\n", name))
@@ -103,13 +102,11 @@ func goMethodForEndpoint(ep Endpoint) string {
 		sb.WriteString("}\n\n")
 	}
 
-	// function signature comment
 	sb.WriteString(fmt.Sprintf("// %s calls %s %s.\n", name, ep.Method, ep.Path))
 	if ep.Description != "" {
 		sb.WriteString(fmt.Sprintf("// %s\n", ep.Description))
 	}
 
-	// params
 	var params []string
 	for _, p := range ep.QueryParams {
 		if p.Required {
@@ -121,7 +118,6 @@ func goMethodForEndpoint(ep Endpoint) string {
 			params = append(params, fmt.Sprintf("%s %s", goParamName(p.Name), goType(p.Type)))
 		}
 	}
-	// optional query params as separate args
 	var optParams []string
 	for _, p := range ep.QueryParams {
 		if !p.Required {
@@ -142,7 +138,6 @@ func goMethodForEndpoint(ep Endpoint) string {
 
 	sb.WriteString(fmt.Sprintf("func (c *Client) %s(%s) %s {\n", name, paramStr, retType))
 
-	// build query
 	hasQuery := len(ep.QueryParams) > 0
 	if hasQuery {
 		sb.WriteString("\tq := url.Values{}\n")
@@ -266,7 +261,6 @@ func tsMethodForEndpoint(ep Endpoint) string {
 	name := tsMethodName(ep)
 	useToken := ep.AuthType == AuthTypeAccessToken
 
-	// interfaces
 	if len(ep.Response) > 0 {
 		sb.WriteString(fmt.Sprintf("  // %s\n", ep.Description))
 		iName := goMethodName(ep) + "Response"
@@ -303,7 +297,6 @@ func tsMethodForEndpoint(ep Endpoint) string {
 	}
 	sb.WriteString(fmt.Sprintf("): Promise<%s> {\n", retType))
 
-	// build query obj
 	if len(ep.QueryParams) > 0 {
 		sb.WriteString("    const query: Record<string, string | number> = {};\n")
 		for _, p := range ep.QueryParams {
