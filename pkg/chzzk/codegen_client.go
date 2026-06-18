@@ -361,6 +361,8 @@ func goMethodName(ep Endpoint) string {
 	return name.String()
 }
 
+func lowerFirst(s string) string { return strings.ToLower(s[:1]) + s[1:] }
+
 func goFieldName(s string) string {
 	s = strings.TrimSuffix(s, "[]")
 	parts := strings.FieldsFunc(s, func(r rune) bool { return r == '_' || r == '-' || r == '.' })
@@ -370,11 +372,11 @@ func goFieldName(s string) string {
 			continue
 		}
 		p = strings.ToUpper(p[:1]) + p[1:]
-		switch p {
-		case "Id":
-			p = "ID"
-		case "Url":
-			p = "URL"
+		switch {
+		case strings.HasSuffix(p, "Id"):
+			p = strings.TrimSuffix(p, "Id") + "ID"
+		case strings.HasSuffix(p, "Url"):
+			p = strings.TrimSuffix(p, "Url") + "URL"
 		}
 		sb.WriteString(p)
 	}
@@ -389,7 +391,7 @@ func goParamName(s string) string {
 		return s
 	}
 	var sb strings.Builder
-	sb.WriteString(strings.ToLower(parts[0]))
+	sb.WriteString(lowerFirst(parts[0]))
 	for _, p := range parts[1:] {
 		if p == "" {
 			continue
@@ -428,7 +430,7 @@ func tsMethodName(ep Endpoint) string {
 	if name == "" {
 		return "call"
 	}
-	return strings.ToLower(name[:1]) + name[1:]
+	return lowerFirst(name)
 }
 
 func tsType(t string) string {
