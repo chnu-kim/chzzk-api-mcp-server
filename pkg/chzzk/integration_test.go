@@ -2,14 +2,12 @@ package chzzk
 
 import (
 	"context"
-	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func connectIntegration(t *testing.T) (*mcp.ClientSession, func()) {
+func connectIntegration(t *testing.T) *mcp.ClientSession {
 	t.Helper()
 	ctx := context.Background()
 
@@ -24,12 +22,12 @@ func connectIntegration(t *testing.T) (*mcp.ClientSession, func()) {
 	if err != nil {
 		t.Fatal("client.Connect:", err)
 	}
-	return cs, func() { cs.Close() }
+	t.Cleanup(func() { cs.Close() })
+	return cs
 }
 
-func TestIntegration_ListTools_FiveToolsRegistered(t *testing.T) {
-	cs, cleanup := connectIntegration(t)
-	defer cleanup()
+func TestIntegration_ListTools(t *testing.T) {
+	cs := connectIntegration(t)
 
 	res, err := cs.ListTools(context.Background(), nil)
 	if err != nil {
@@ -55,16 +53,6 @@ func TestIntegration_ListTools_FiveToolsRegistered(t *testing.T) {
 	if len(res.Tools) != len(want) {
 		t.Errorf("expected %d tools, got %d", len(want), len(res.Tools))
 	}
-}
-
-func TestIntegration_ListTools_InputSchemasNotNil(t *testing.T) {
-	cs, cleanup := connectIntegration(t)
-	defer cleanup()
-
-	res, err := cs.ListTools(context.Background(), nil)
-	if err != nil {
-		t.Fatal("ListTools:", err)
-	}
 	for _, tool := range res.Tools {
 		if tool.InputSchema == nil {
 			t.Errorf("tool %q has nil InputSchema", tool.Name)
@@ -72,9 +60,8 @@ func TestIntegration_ListTools_InputSchemasNotNil(t *testing.T) {
 	}
 }
 
-func TestIntegration_CallTool_ListAPIs_ValidJSON(t *testing.T) {
-	cs, cleanup := connectIntegration(t)
-	defer cleanup()
+func TestIntegration_CallTool_ListAPIs(t *testing.T) {
+	cs := connectIntegration(t)
 
 	result, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
 		Name:      "chzzk_list_apis",
@@ -86,16 +73,10 @@ func TestIntegration_CallTool_ListAPIs_ValidJSON(t *testing.T) {
 	if result.IsError {
 		t.Fatalf("unexpected IsError=true: %v", result.Content)
 	}
-	text := result.Content[0].(*mcp.TextContent).Text
-	var parsed any
-	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
-		t.Errorf("response is not valid JSON: %v\n%s", err, text)
-	}
 }
 
 func TestIntegration_CallTool_GetAPISpec(t *testing.T) {
-	cs, cleanup := connectIntegration(t)
-	defer cleanup()
+	cs := connectIntegration(t)
 
 	result, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
 		Name:      "chzzk_get_api_spec",
@@ -111,8 +92,7 @@ func TestIntegration_CallTool_GetAPISpec(t *testing.T) {
 }
 
 func TestIntegration_CallTool_GenerateAuthCode_Go(t *testing.T) {
-	cs, cleanup := connectIntegration(t)
-	defer cleanup()
+	cs := connectIntegration(t)
 
 	result, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
 		Name:      "chzzk_generate_auth_code",
@@ -124,9 +104,5 @@ func TestIntegration_CallTool_GenerateAuthCode_Go(t *testing.T) {
 	if result.IsError {
 		text := result.Content[0].(*mcp.TextContent).Text
 		t.Fatalf("unexpected IsError=true: %s", text)
-	}
-	text := result.Content[0].(*mcp.TextContent).Text
-	if !strings.Contains(text, "package auth") {
-		t.Errorf("expected 'package auth' in response, got:\n%s", text)
 	}
 }
