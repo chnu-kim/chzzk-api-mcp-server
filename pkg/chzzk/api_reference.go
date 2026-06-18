@@ -576,7 +576,6 @@ var AllEndpoints = []Endpoint{
 	},
 }
 
-// endpointIndex is a map from "METHOD /path" to the endpoint.
 var endpointIndex map[string]Endpoint
 
 func init() {

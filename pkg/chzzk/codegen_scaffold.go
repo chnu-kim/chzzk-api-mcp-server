@@ -57,7 +57,6 @@ func scaffoldTypeScript(projectName string, features map[string]bool) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# Chzzk TypeScript 프로젝트 스캐폴드: %s\n\n", projectName))
 
-	// Directory structure
 	sb.WriteString("## 디렉토리 구조\n\n```\n")
 	sb.WriteString(projectName + "/\n├── src/\n")
 	if features["auth"] {
@@ -74,7 +73,6 @@ func scaffoldTypeScript(projectName string, features map[string]bool) string {
 	}
 	sb.WriteString("│   ├── client.ts\n│   └── index.ts\n├── package.json\n├── tsconfig.json\n└── .env\n```\n\n")
 
-	// package.json
 	sb.WriteString("## package.json\n\n```json\n")
 	sb.WriteString("{\n")
 	sb.WriteString("  \"name\": \"" + projectName + "\",\n")
@@ -89,7 +87,6 @@ func scaffoldTypeScript(projectName string, features map[string]bool) string {
 	sb.WriteString("    \"tsx\": \"^4.0.0\"\n")
 	sb.WriteString("  }\n}\n```\n\n")
 
-	// tsconfig.json
 	sb.WriteString("## tsconfig.json\n\n```json\n")
 	sb.WriteString("{\n")
 	sb.WriteString("  \"compilerOptions\": {\n")
@@ -142,7 +139,6 @@ func scaffoldTypeScript(projectName string, features map[string]bool) string {
 	sb.WriteString("    return data.content;\n")
 	sb.WriteString("  }\n}\n```\n\n")
 
-	// .env
 	sb.WriteString("## .env\n\n```\n")
 	sb.WriteString("CHZZK_CLIENT_ID=your_client_id\n")
 	sb.WriteString("CHZZK_CLIENT_SECRET=your_client_secret\n")
@@ -150,7 +146,6 @@ func scaffoldTypeScript(projectName string, features map[string]bool) string {
 	sb.WriteString("CHZZK_REFRESH_TOKEN=your_refresh_token\n")
 	sb.WriteString("```\n\n")
 
-	// run
 	sb.WriteString("## 실행\n\n```bash\nnpm install\nnpm run dev\n```\n")
 
 	return sb.String()
