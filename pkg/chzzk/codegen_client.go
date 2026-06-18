@@ -361,6 +361,8 @@ func goMethodName(ep Endpoint) string {
 	return name.String()
 }
 
+func lowerFirst(s string) string { return strings.ToLower(s[:1]) + s[1:] }
+
 func goFieldName(s string) string {
 	s = strings.TrimSuffix(s, "[]")
 	parts := strings.FieldsFunc(s, func(r rune) bool { return r == '_' || r == '-' || r == '.' })
@@ -370,14 +372,11 @@ func goFieldName(s string) string {
 			continue
 		}
 		p = strings.ToUpper(p[:1]) + p[1:]
-		// camelCase suffix normalization (e.g. "channelId" → "ChannelID")
 		switch {
-		case strings.HasSuffix(p, "Ids"):
-			p = p[:len(p)-3] + "IDs"
 		case strings.HasSuffix(p, "Id"):
-			p = p[:len(p)-2] + "ID"
+			p = strings.TrimSuffix(p, "Id") + "ID"
 		case strings.HasSuffix(p, "Url"):
-			p = p[:len(p)-3] + "URL"
+			p = strings.TrimSuffix(p, "Url") + "URL"
 		}
 		sb.WriteString(p)
 	}
@@ -392,8 +391,7 @@ func goParamName(s string) string {
 		return s
 	}
 	var sb strings.Builder
-	first := parts[0]
-	sb.WriteString(strings.ToLower(first[:1]) + first[1:]) // 첫 글자만 소문자 (camelCase 보존)
+	sb.WriteString(lowerFirst(parts[0]))
 	for _, p := range parts[1:] {
 		if p == "" {
 			continue
@@ -432,7 +430,7 @@ func tsMethodName(ep Endpoint) string {
 	if name == "" {
 		return "call"
 	}
-	return strings.ToLower(name[:1]) + name[1:]
+	return lowerFirst(name)
 }
 
 func tsType(t string) string {

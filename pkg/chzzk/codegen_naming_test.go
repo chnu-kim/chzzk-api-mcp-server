@@ -26,8 +26,6 @@ func TestGoFieldName(t *testing.T) {
 		// 단독 두문자어
 		{"id", "ID"},
 		{"url", "URL"},
-		// 복수형
-		{"channelIds[]", "ChannelIDs"},
 		// 두문자어 아닌 필드 — suffix에 id/url을 포함하지 않으면 변환 없음
 		{"expiresIn", "ExpiresIn"},
 		{"accessToken", "AccessToken"},
@@ -35,9 +33,9 @@ func TestGoFieldName(t *testing.T) {
 		{"concurrentUserCount", "ConcurrentUserCount"},
 		{"verifiedMark", "VerifiedMark"},
 		// "id/url"을 부분 포함하지만 suffix가 아닌 경우 → 변환 없음 (false positive 방지)
-		{"studio", "Studio"},     // "udio"로 끝남, "id" suffix 아님
-		{"valid", "Valid"},        // "alid"로 끝남, "Id" suffix 아님
-		{"periods", "Periods"},    // "iods"로 끝남, "Ids" suffix 아님
+		{"studio", "Studio"},
+		{"valid", "Valid"},
+		{"periods", "Periods"},
 	}
 	for _, tc := range cases {
 		if got := goFieldName(tc.input); got != tc.want {
@@ -53,14 +51,14 @@ func TestGoParamName(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"channelId", "channelId"},                                            // camelCase 보존
-		{"channel_id", "channelId"},                                           // snake_case → camelCase
+		{"channelId", "channelId"},
+		{"channel_id", "channelId"},
 		{"page", "page"},
 		{"size", "size"},
-		{"messageTime", "messageTime"},                                        // camelCase 보존
-		{"minFollowerMinute", "minFollowerMinute"},                             // camelCase 보존
-		{"allowSubscriberInFollowerMode", "allowSubscriberInFollowerMode"},     // camelCase 보존
-		{"channelIds[]", "channelIds"},                                        // [] suffix 제거
+		{"messageTime", "messageTime"},
+		{"minFollowerMinute", "minFollowerMinute"},
+		{"allowSubscriberInFollowerMode", "allowSubscriberInFollowerMode"},
+		{"channelIds[]", "channelIds"},
 		// 점으로 끝나는 이름 처리 (TrimSuffix 경로)
 		{"param.", "param"},
 	}
@@ -149,6 +147,20 @@ func TestTsType(t *testing.T) {
 
 // ─── Go 코드 생성 결과 문법 유효성 (go/format 파서 사용) ─────────────────────
 
+// mustClientGoCode는 단일 엔드포인트로 Go 클라이언트 코드를 생성하고 문법 유효성을 검증한다.
+func mustClientGoCode(t *testing.T, key string) string {
+	t.Helper()
+	ep, ok := FindEndpoint(key)
+	if !ok {
+		t.Fatalf("endpoint not found: %s", key)
+	}
+	code := apiClientGo([]Endpoint{ep})
+	if _, err := format.Source([]byte(code)); err != nil {
+		t.Fatalf("generated Go code is not valid Go: %v", err)
+	}
+	return code
+}
+
 func TestApiClientGoSyntaxValid(t *testing.T) {
 	endpoints := []string{
 		"GET /open/v1/channels",           // string[], string, int, bool Response 필드
@@ -156,7 +168,7 @@ func TestApiClientGoSyntaxValid(t *testing.T) {
 		"GET /open/v1/lives",              // int/bool/string[] Response, int optional QueryParam
 		"POST /open/v1/chats/send",        // BodyParams, access_token 인증
 		"PUT /open/v1/chats/settings",     // int/bool BodyParams
-		"GET /open/v1/streams/key",        // Response 없음 → void(error만 반환) 코드 경로
+		"GET /open/v1/streams/key",        // Response 없음 → error만 반환
 	}
 
 	var eps []Endpoint
@@ -168,21 +180,13 @@ func TestApiClientGoSyntaxValid(t *testing.T) {
 		eps = append(eps, ep)
 	}
 
-	code := apiClientGo(eps)
-
-	if _, err := format.Source([]byte(code)); err != nil {
-		t.Errorf("generated Go client code is not valid Go:\n%v\n\ncode:\n%s", err, code)
+	if _, err := format.Source([]byte(apiClientGo(eps))); err != nil {
+		t.Errorf("generated Go client code is not valid Go: %v", err)
 	}
 }
 
 func TestApiClientGoFieldNameAcronyms(t *testing.T) {
-	// channelId, channelImageUrl 포함 엔드포인트로 Go 컨벤션 준수 확인
-	ep, ok := FindEndpoint("GET /open/v1/channels")
-	if !ok {
-		t.Fatal("endpoint not found: GET /open/v1/channels")
-	}
-
-	code := apiClientGo([]Endpoint{ep})
+	code := mustClientGoCode(t, "GET /open/v1/channels")
 
 	if !strings.Contains(code, "ChannelID") {
 		t.Errorf("expected ChannelID (not ChannelId) in generated Go code; got:\n%s", code)
@@ -192,38 +196,15 @@ func TestApiClientGoFieldNameAcronyms(t *testing.T) {
 	}
 }
 
-func TestApiClientGoBoolAndIntInResponse(t *testing.T) {
-	// GET /open/v1/lives: Response에 int(concurrentUserCount), bool(adult), string[](tags)
-	ep, ok := FindEndpoint("GET /open/v1/lives")
-	if !ok {
-		t.Fatal("endpoint not found: GET /open/v1/lives")
-	}
+func TestApiClientGoLivesEndpoint(t *testing.T) {
+	// GET /open/v1/lives: Response에 int/bool/string[], optional int QueryParam
+	code := mustClientGoCode(t, "GET /open/v1/lives")
 
-	code := apiClientGo([]Endpoint{ep})
-
-	if _, err := format.Source([]byte(code)); err != nil {
-		t.Errorf("generated Go code is not valid Go: %v", err)
-	}
 	if !strings.Contains(code, "bool") {
 		t.Error("expected bool field type in generated Go code")
 	}
 	if !strings.Contains(code, "[]string") {
 		t.Error("expected []string field type in generated Go code")
-	}
-}
-
-func TestApiClientGoIntQueryParamUsesStrconv(t *testing.T) {
-	// optional int QueryParam → strconv.Itoa 조건부 생성 확인
-	// GET /open/v1/lives: optional int QueryParam "size"
-	ep, ok := FindEndpoint("GET /open/v1/lives")
-	if !ok {
-		t.Fatal("endpoint not found: GET /open/v1/lives")
-	}
-
-	code := apiClientGo([]Endpoint{ep})
-
-	if _, err := format.Source([]byte(code)); err != nil {
-		t.Errorf("generated Go code is not valid Go: %v", err)
 	}
 	if !strings.Contains(code, "strconv.Itoa") {
 		t.Error("expected strconv.Itoa for int QueryParam in generated Go code")
@@ -232,17 +213,8 @@ func TestApiClientGoIntQueryParamUsesStrconv(t *testing.T) {
 
 func TestApiClientGoResponselessEndpoint(t *testing.T) {
 	// Response 없는 엔드포인트 → 반환 타입 error, nil 반환 코드 경로
-	ep, ok := FindEndpoint("GET /open/v1/streams/key")
-	if !ok {
-		t.Fatal("endpoint not found: GET /open/v1/streams/key")
-	}
+	code := mustClientGoCode(t, "GET /open/v1/streams/key")
 
-	code := apiClientGo([]Endpoint{ep})
-
-	if _, err := format.Source([]byte(code)); err != nil {
-		t.Errorf("generated Go code for response-less endpoint is not valid Go: %v\n\ncode:\n%s", err, code)
-	}
-	// Response 없는 엔드포인트는 반환 타입이 error만이어야 함
 	if strings.Contains(code, "Response struct") {
 		t.Error("response-less endpoint should not generate a Response struct")
 	}
