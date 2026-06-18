@@ -64,7 +64,7 @@ func handleListAPIs(_ context.Context, _ *mcp.CallToolRequest, input ListAPIsInp
 	}
 	b, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
-		return errorResult("응답 직렬화 오류: " + err.Error()), nil, nil
+		return nil, nil, err
 	}
 	return textResult(string(b)), nil, nil
 }
@@ -111,7 +111,7 @@ func handleGetAPISpec(_ context.Context, _ *mcp.CallToolRequest, input GetAPISpe
 
 	b, err := json.MarshalIndent(ep, "", "  ")
 	if err != nil {
-		return errorResult("응답 직렬화 오류: " + err.Error()), nil, nil
+		return nil, nil, err
 	}
 	return textResult(string(b)), nil, nil
 }
