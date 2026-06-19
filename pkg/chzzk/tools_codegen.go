@@ -92,6 +92,44 @@ func handleScaffoldProject(_ context.Context, _ *mcp.CallToolRequest, input Scaf
 	}
 }
 
+// ─── chzzk_generate_websocket_client ──────────────────────────────────────────
+
+type GenerateWebSocketClientInput struct {
+	Language string   `json:"language" jsonschema:"코드 생성 언어. go 또는 typescript"`
+	Events   []string `json:"events" jsonschema:"구독할 이벤트 목록. chat, donation 중 선택. 예: ['chat', 'donation']. 미지정 시 chat, donation 모두 포함"`
+}
+
+func handleGenerateWebSocketClient(_ context.Context, _ *mcp.CallToolRequest, input GenerateWebSocketClientInput) (*mcp.CallToolResult, any, error) {
+	if len(input.Events) == 0 {
+		input.Events = supportedWSEvents
+	}
+
+	eventSet := make(map[string]bool)
+	for _, e := range input.Events {
+		e = strings.ToLower(e)
+		valid := false
+		for _, s := range supportedWSEvents {
+			if s == e {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return errorResult(fmt.Sprintf("지원하지 않는 이벤트: %q. 지원 이벤트: %s", e, strings.Join(supportedWSEvents, ", "))), nil, nil
+		}
+		eventSet[e] = true
+	}
+
+	switch strings.ToLower(input.Language) {
+	case "go":
+		return textResult(wsClientGo(eventSet)), nil, nil
+	case "typescript", "ts":
+		return textResult(wsClientTypeScript(eventSet)), nil, nil
+	default:
+		return errorResult(fmt.Sprintf("지원하지 않는 언어: %q. 지원 언어: go, typescript", input.Language)), nil, nil
+	}
+}
+
 // RegisterCodegenTools adds code generation tools to the MCP server.
 func RegisterCodegenTools(s *mcp.Server) {
 	mcp.AddTool(s, &mcp.Tool{
@@ -117,4 +155,13 @@ func RegisterCodegenTools(s *mcp.Server) {
 			"기본 클라이언트, 설정 파일, 환경 변수 예시를 포함합니다. " +
 			"지원 언어: go, typescript",
 	}, handleScaffoldProject)
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name: "chzzk_generate_websocket_client",
+		Description: "치지직 WebSocket 실시간 이벤트 클라이언트 코드를 생성합니다. " +
+			"Session API로 WebSocket URL을 발급받고, 지정한 이벤트(chat, donation)를 구독하는 " +
+			"완성된 클라이언트 코드를 반환합니다. " +
+			"인증: Access Token (CHZZK_ACCESS_TOKEN 환경 변수). " +
+			"지원 언어: go, typescript",
+	}, handleGenerateWebSocketClient)
 }
