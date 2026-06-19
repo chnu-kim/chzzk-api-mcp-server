@@ -1,11 +1,27 @@
 package chzzk
 
 import (
+	"fmt"
 	"strings"
 )
 
+var supportedWSEvents = []string{"chat", "donation"}
+
+// orderedWSEvents returns the events subset in supportedWSEvents order,
+// guaranteeing deterministic output regardless of map iteration order.
+func orderedWSEvents(events map[string]bool) []string {
+	var result []string
+	for _, ev := range supportedWSEvents {
+		if events[ev] {
+			result = append(result, ev)
+		}
+	}
+	return result
+}
+
 func wsClientGo(events map[string]bool) string {
 	var sb strings.Builder
+	ordered := orderedWSEvents(events)
 
 	sb.WriteString(`// WebSocket 클라이언트 — 치지직 실시간 이벤트 수신
 // 의존성: go get github.com/gorilla/websocket
@@ -42,7 +58,6 @@ type sessionListContent struct {
 	Data []sessionContent ` + "`" + `json:"data"` + "`" + `
 }
 
-// getWebSocketURL calls GET /open/v1/sessions/auth and returns the webSocketUrl.
 func getWebSocketURL(ctx context.Context, accessToken string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/open/v1/sessions/auth", nil)
 	if err != nil {
@@ -69,7 +84,6 @@ func getWebSocketURL(ctx context.Context, accessToken string) (string, error) {
 	return result.Content.WebSocketURL, nil
 }
 
-// getSessionKey calls GET /open/v1/sessions and returns the first active session key.
 func getSessionKey(ctx context.Context, accessToken string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/open/v1/sessions", nil)
 	if err != nil {
@@ -94,11 +108,11 @@ func getSessionKey(ctx context.Context, accessToken string) (string, error) {
 
 `)
 
-	if events["chat"] {
-		sb.WriteString(`// subscribeChat calls POST /open/v1/sessions/events/subscribe/chat.
-func subscribeChat(ctx context.Context, accessToken, sessionKey string) error {
+	for _, ev := range ordered {
+		funcName := "subscribe" + strings.ToUpper(ev[:1]) + ev[1:]
+		sb.WriteString(fmt.Sprintf(`func %s(ctx context.Context, accessToken, sessionKey string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		baseURL+"/open/v1/sessions/events/subscribe/chat?sessionKey="+sessionKey, nil)
+		baseURL+"/open/v1/sessions/events/subscribe/%s?sessionKey="+sessionKey, nil)
 	if err != nil {
 		return err
 	}
@@ -111,27 +125,7 @@ func subscribeChat(ctx context.Context, accessToken, sessionKey string) error {
 	return nil
 }
 
-`)
-	}
-
-	if events["donation"] {
-		sb.WriteString(`// subscribeDonation calls POST /open/v1/sessions/events/subscribe/donation.
-func subscribeDonation(ctx context.Context, accessToken, sessionKey string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		baseURL+"/open/v1/sessions/events/subscribe/donation?sessionKey="+sessionKey, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
-}
-
-`)
+`, funcName, ev))
 	}
 
 	sb.WriteString(`func main() {
@@ -164,17 +158,11 @@ func subscribeDonation(ctx context.Context, accessToken, sessionKey string) erro
 	// 4. 이벤트 구독
 `)
 
-	if events["chat"] {
-		sb.WriteString(`	if err := subscribeChat(ctx, accessToken, sessionKey); err != nil {
-		log.Fatalf("subscribeChat: %v", err)
-	}
-`)
-	}
-	if events["donation"] {
-		sb.WriteString(`	if err := subscribeDonation(ctx, accessToken, sessionKey); err != nil {
-		log.Fatalf("subscribeDonation: %v", err)
-	}
-`)
+	for _, ev := range ordered {
+		funcName := "subscribe" + strings.ToUpper(ev[:1]) + ev[1:]
+		sb.WriteString("\tif err := " + funcName + "(ctx, accessToken, sessionKey); err != nil {\n")
+		sb.WriteString("\t\tlog.Fatalf(\"" + funcName + ": %v\", err)\n")
+		sb.WriteString("\t}\n")
 	}
 
 	sb.WriteString(`
@@ -201,6 +189,7 @@ func subscribeDonation(ctx context.Context, accessToken, sessionKey string) erro
 func wsClientTypeScript(events map[string]bool) string {
 	bt := "`"
 	var sb strings.Builder
+	ordered := orderedWSEvents(events)
 
 	sb.WriteString(`// WebSocket 클라이언트 — 치지직 실시간 이벤트 수신
 // Node.js 18+ (fetch/WebSocket 내장) 또는 ws 패키지 사용
@@ -244,20 +233,10 @@ async function getSessionKey(accessToken: string): Promise<string> {
 
 `)
 
-	if events["chat"] {
-		sb.WriteString(`async function subscribeChat(accessToken: string, sessionKey: string): Promise<void> {
-  await fetch(` + bt + `${BASE_URL}/open/v1/sessions/events/subscribe/chat?sessionKey=${sessionKey}` + bt + `, {
-    method: "POST",
-    headers: { Authorization: ` + bt + `Bearer ${accessToken}` + bt + ` },
-  });
-}
-
-`)
-	}
-
-	if events["donation"] {
-		sb.WriteString(`async function subscribeDonation(accessToken: string, sessionKey: string): Promise<void> {
-  await fetch(` + bt + `${BASE_URL}/open/v1/sessions/events/subscribe/donation?sessionKey=${sessionKey}` + bt + `, {
+	for _, ev := range ordered {
+		funcName := "subscribe" + strings.ToUpper(ev[:1]) + ev[1:]
+		sb.WriteString("async function " + funcName + `(accessToken: string, sessionKey: string): Promise<void> {
+  await fetch(` + bt + `${BASE_URL}/open/v1/sessions/events/subscribe/` + ev + `?sessionKey=${sessionKey}` + bt + `, {
     method: "POST",
     headers: { Authorization: ` + bt + `Bearer ${accessToken}` + bt + ` },
   });
@@ -285,13 +264,9 @@ async function getSessionKey(accessToken: string): Promise<string> {
     // 4. 이벤트 구독
 `)
 
-	if events["chat"] {
-		sb.WriteString(`    await subscribeChat(accessToken, sessionKey);
-`)
-	}
-	if events["donation"] {
-		sb.WriteString(`    await subscribeDonation(accessToken, sessionKey);
-`)
+	for _, ev := range ordered {
+		funcName := "subscribe" + strings.ToUpper(ev[:1]) + ev[1:]
+		sb.WriteString("    await " + funcName + "(accessToken, sessionKey);\n")
 	}
 
 	sb.WriteString(`  });

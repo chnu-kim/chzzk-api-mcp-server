@@ -99,18 +99,23 @@ type GenerateWebSocketClientInput struct {
 	Events   []string `json:"events" jsonschema:"구독할 이벤트 목록. chat, donation 중 선택. 예: ['chat', 'donation']. 미지정 시 chat, donation 모두 포함"`
 }
 
-var validWSEvents = map[string]bool{"chat": true, "donation": true}
-
 func handleGenerateWebSocketClient(_ context.Context, _ *mcp.CallToolRequest, input GenerateWebSocketClientInput) (*mcp.CallToolResult, any, error) {
 	if len(input.Events) == 0 {
-		input.Events = []string{"chat", "donation"}
+		input.Events = supportedWSEvents
 	}
 
 	eventSet := make(map[string]bool)
 	for _, e := range input.Events {
 		e = strings.ToLower(e)
-		if !validWSEvents[e] {
-			return errorResult(fmt.Sprintf("지원하지 않는 이벤트: %q. 지원 이벤트: chat, donation", e)), nil, nil
+		valid := false
+		for _, s := range supportedWSEvents {
+			if s == e {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return errorResult(fmt.Sprintf("지원하지 않는 이벤트: %q. 지원 이벤트: %s", e, strings.Join(supportedWSEvents, ", "))), nil, nil
 		}
 		eventSet[e] = true
 	}
