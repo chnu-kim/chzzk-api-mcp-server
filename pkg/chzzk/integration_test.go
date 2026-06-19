@@ -106,3 +106,42 @@ func TestIntegration_CallTool_GenerateAuthCode_Go(t *testing.T) {
 		t.Fatalf("unexpected IsError=true: %s", text)
 	}
 }
+
+func TestIntegration_CallTool_GenerateAPIClient(t *testing.T) {
+	cs := connectIntegration(t)
+
+	result, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "chzzk_generate_api_client",
+		Arguments: map[string]any{
+			"language":  "go",
+			"endpoints": []any{"GET /open/v1/lives"},
+		},
+	})
+	if err != nil {
+		t.Fatal("CallTool:", err)
+	}
+	if result.IsError {
+		text := result.Content[0].(*mcp.TextContent).Text
+		t.Fatalf("unexpected IsError=true: %s", text)
+	}
+}
+
+func TestIntegration_CallTool_ScaffoldProject(t *testing.T) {
+	cs := connectIntegration(t)
+
+	result, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "chzzk_scaffold_project",
+		Arguments: map[string]any{
+			"language":     "go",
+			"project_name": "test-bot",
+			"features":     []any{"auth", "live"},
+		},
+	})
+	if err != nil {
+		t.Fatal("CallTool:", err)
+	}
+	if result.IsError {
+		text := result.Content[0].(*mcp.TextContent).Text
+		t.Fatalf("unexpected IsError=true: %s", text)
+	}
+}

@@ -55,6 +55,16 @@ func TestHandleListAPIs_CategoryFilter(t *testing.T) {
 	}
 }
 
+func TestHandleListAPIs_CategoryCaseInsensitive(t *testing.T) {
+	result, _, err := handleListAPIs(context.Background(), &mcp.CallToolRequest{}, ListAPIsInput{Category: "LIVE"})
+	if err != nil {
+		t.Fatal("handler should not return error")
+	}
+	if result.IsError {
+		t.Errorf("expected success for uppercase category 'LIVE': %s", result.Content[0].(*mcp.TextContent).Text)
+	}
+}
+
 func TestHandleListAPIs_UnknownCategory(t *testing.T) {
 	result, _, err := handleListAPIs(context.Background(), &mcp.CallToolRequest{}, ListAPIsInput{Category: "unknown"})
 	if err != nil {
@@ -108,6 +118,32 @@ func TestHandleGetAPISpec_UnknownEndpoint(t *testing.T) {
 	}
 	if !result.IsError {
 		t.Error("expected IsError=true for unknown endpoint")
+	}
+}
+
+func TestHandleGetAPISpec_InvalidInput(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{"whitespace only", "   "},
+		{"no HTTP method", "/open/v1/lives"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, _, err := handleGetAPISpec(context.Background(), &mcp.CallToolRequest{}, GetAPISpecInput{Endpoint: tc.input})
+			if err != nil {
+				t.Fatal("handler should not return error")
+			}
+			if !result.IsError {
+				t.Errorf("expected IsError=true for input %q", tc.input)
+			}
+			// suggestion section은 "\n\n유사한 엔드포인트:" 로 시작하므로
+			// "\n\n" 이 없으면 제안 없음
+			if strings.Contains(result.Content[0].(*mcp.TextContent).Text, "\n\n") {
+				t.Errorf("input %q should produce no suggestion section", tc.input)
+			}
+		})
 	}
 }
 

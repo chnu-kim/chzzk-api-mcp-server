@@ -6,6 +6,73 @@ import (
 	"testing"
 )
 
+// ─── tsMethodForEndpoint ──────────────────────────────────────────────────────
+
+func TestTsMethodForEndpoint_OptionalQueryParams(t *testing.T) {
+	ep := Endpoint{
+		Method:      "GET",
+		Path:        "/test",
+		QueryParams: []Param{{Name: "page", Type: "int", Required: false}},
+	}
+	code := tsMethodForEndpoint(ep)
+	if !strings.Contains(code, "!== undefined") {
+		t.Errorf("expected optional param guard ('!== undefined') in TS method; got:\n%s", code)
+	}
+}
+
+func TestTsMethodForEndpoint_BodyAndAccessToken(t *testing.T) {
+	ep := Endpoint{
+		Method:     "POST",
+		Path:       "/test",
+		AuthType:   AuthTypeAccessToken,
+		BodyParams: []Param{{Name: "message", Type: "string", Required: true}},
+		Response:   []ResponseField{{Name: "ok", Type: "bool"}},
+	}
+	code := tsMethodForEndpoint(ep)
+	if !strings.Contains(code, "body:") {
+		t.Errorf("expected 'body:' for BodyParams endpoint; got:\n%s", code)
+	}
+	if strings.Contains(code, "const query") {
+		t.Errorf("unexpected 'const query' block when no QueryParams exist; got:\n%s", code)
+	}
+	if !strings.Contains(code, "auth: true") {
+		t.Errorf("expected 'auth: true' for access_token endpoint; got:\n%s", code)
+	}
+}
+
+func TestTsMethodForEndpoint_VoidResponse(t *testing.T) {
+	ep := Endpoint{Method: "GET", Path: "/test"}
+	code := tsMethodForEndpoint(ep)
+	if !strings.Contains(code, "Promise<void>") {
+		t.Errorf("expected 'Promise<void>' for response-less endpoint; got:\n%s", code)
+	}
+}
+
+func TestTsMethodForEndpoint_RequiredAndOptionalQueryParams(t *testing.T) {
+	ep := Endpoint{
+		Method: "GET",
+		Path:   "/test",
+		QueryParams: []Param{
+			{Name: "keyword", Type: "string", Required: true},
+			{Name: "size", Type: "int", Required: false},
+		},
+	}
+	code := tsMethodForEndpoint(ep)
+
+	if !strings.Contains(code, "keyword: string") {
+		t.Errorf("expected required param in function signature without '?'; got:\n%s", code)
+	}
+	if !strings.Contains(code, "size?: ") {
+		t.Errorf("expected optional param with '?' in function signature; got:\n%s", code)
+	}
+	if strings.Contains(code, "if (keyword !== undefined)") {
+		t.Errorf("required param should not have an undefined guard; got:\n%s", code)
+	}
+	if !strings.Contains(code, "!== undefined") {
+		t.Errorf("expected undefined guard for optional param; got:\n%s", code)
+	}
+}
+
 // ─── goFieldName ──────────────────────────────────────────────────────────────
 
 func TestGoFieldName(t *testing.T) {
