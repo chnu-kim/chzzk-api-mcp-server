@@ -140,6 +140,7 @@ var AllEndpoints = []Endpoint{
 		Category:    CategoryUser,
 		Description: "로그인한 사용자의 채널 정보 조회",
 		AuthType:    AuthTypeAccessToken,
+		Scope:       "유저 정보 조회",
 		Response: []ResponseField{
 			{Name: "channelId", Type: "string", Description: "채널 ID"},
 			{Name: "channelName", Type: "string", Description: "채널 이름"},
@@ -171,6 +172,12 @@ var AllEndpoints = []Endpoint{
 		Description: "채널 방송 관리자 목록 조회",
 		AuthType:    AuthTypeAccessToken,
 		Scope:       "채널 관리자 조회",
+		Response: []ResponseField{
+			{Name: "managerChannelId", Type: "string", Description: "관리자 채널 ID"},
+			{Name: "managerChannelName", Type: "string", Description: "관리자 채널 이름"},
+			{Name: "userRole", Type: "string", Description: "역할 (소유자 | 관리자 | 운영자 | 정산관리자)"},
+			{Name: "createdDate", Type: "string", Description: "등록 날짜"},
+		},
 	},
 	{
 		Method:      "GET",
@@ -237,7 +244,7 @@ var AllEndpoints = []Endpoint{
 		Description: "현재 라이브 목록 조회 (커서 페이지네이션)",
 		AuthType:    AuthTypeClientCredentials,
 		QueryParams: []Param{
-			{Name: "size", Type: "int", Required: false, Description: "반환 개수", Min: "1", Max: "20"},
+			{Name: "size", Type: "int", Required: false, Description: "반환 개수", Default: "20", Min: "1", Max: "20"},
 			{Name: "next", Type: "string", Required: false, Description: "다음 페이지 커서"},
 		},
 		Response: []ResponseField{
@@ -249,7 +256,8 @@ var AllEndpoints = []Endpoint{
 			{Name: "adult", Type: "bool", Description: "성인 방송 여부"},
 			{Name: "tags", Type: "string[]", Description: "태그 목록"},
 			{Name: "categoryType", Type: "string", Description: "카테고리 타입"},
-			{Name: "liveCategory", Type: "string", Description: "라이브 카테고리"},
+			{Name: "liveCategory", Type: "string", Description: "라이브 카테고리 ID"},
+			{Name: "liveCategoryValue", Type: "string", Description: "라이브 카테고리 이름"},
 			{Name: "channelId", Type: "string", Description: "채널 ID"},
 			{Name: "channelName", Type: "string", Description: "채널 이름"},
 			{Name: "channelImageUrl", Type: "string", Description: "채널 이미지 URL"},
@@ -270,6 +278,14 @@ var AllEndpoints = []Endpoint{
 		Description: "방송 설정 조회",
 		AuthType:    AuthTypeAccessToken,
 		Scope:       "방송 설정 조회",
+		Response: []ResponseField{
+			{Name: "defaultLiveTitle", Type: "string", Description: "기본 방송 제목"},
+			{Name: "category.categoryType", Type: "string", Description: "카테고리 타입 (GAME | SPORTS | ETC)"},
+			{Name: "category.categoryId", Type: "string", Description: "카테고리 ID"},
+			{Name: "category.categoryValue", Type: "string", Description: "카테고리 이름"},
+			{Name: "category.posterImageUrl", Type: "string", Description: "카테고리 포스터 이미지 URL"},
+			{Name: "tags", Type: "string[]", Description: "태그 목록"},
+		},
 	},
 	{
 		Method:      "PATCH",
@@ -319,6 +335,7 @@ var AllEndpoints = []Endpoint{
 		Category:    CategoryChat,
 		Description: "채팅 설정 조회",
 		AuthType:    AuthTypeAccessToken,
+		Scope:       "채팅 설정 조회",
 		Response: []ResponseField{
 			{Name: "chatAvailableCondition", Type: "string", Description: "채팅 가능 조건"},
 			{Name: "chatAvailableGroup", Type: "string", Description: "채팅 가능 그룹"},
@@ -334,6 +351,7 @@ var AllEndpoints = []Endpoint{
 		Category:    CategoryChat,
 		Description: "채팅 설정 변경",
 		AuthType:    AuthTypeAccessToken,
+		Scope:       "채팅 설정 변경",
 		BodyParams: []Param{
 			{Name: "chatAvailableCondition", Type: "string", Required: false, Description: "채팅 가능 조건"},
 			{Name: "chatAvailableGroup", Type: "string", Required: false, Description: "채팅 가능 그룹"},
