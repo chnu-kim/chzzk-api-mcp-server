@@ -1,6 +1,9 @@
 package chzzk
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func mustFindEndpoint(t *testing.T, key string) Endpoint {
 	t.Helper()
@@ -38,11 +41,7 @@ func TestAPIReference_UsersMe_HasScope(t *testing.T) {
 
 func TestAPIReference_StreamingRoles_HasResponseFields(t *testing.T) {
 	ep := mustFindEndpoint(t, "GET /open/v1/channels/streaming-roles")
-	for _, field := range []string{"managerChannelId", "managerChannelName", "userRole", "createdDate"} {
-		if _, ok := findResponseField(ep.Response, field); !ok {
-			t.Errorf("response field %q missing", field)
-		}
-	}
+	assertResponseFields(t, ep, []string{"managerChannelId", "managerChannelName", "userRole", "createdDate"})
 }
 
 func TestAPIReference_Lives_HasLiveCategoryValue(t *testing.T) {
@@ -83,21 +82,13 @@ func TestAPIReference_ChatsSettings_HasScope(t *testing.T) {
 
 func assertResponseFields(t *testing.T, ep Endpoint, want []string) {
 	t.Helper()
-	wantSet := make(map[string]bool, len(want))
 	for _, n := range want {
-		wantSet[n] = true
-	}
-	gotSet := make(map[string]bool, len(ep.Response))
-	for _, f := range ep.Response {
-		gotSet[f.Name] = true
-	}
-	for _, n := range want {
-		if !gotSet[n] {
+		if _, ok := findResponseField(ep.Response, n); !ok {
 			t.Errorf("response field %q missing", n)
 		}
 	}
 	for _, f := range ep.Response {
-		if !wantSet[f.Name] {
+		if !slices.Contains(want, f.Name) {
 			t.Errorf("unexpected response field %q", f.Name)
 		}
 	}
