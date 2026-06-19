@@ -80,3 +80,105 @@ func TestAPIReference_ChatsSettings_HasScope(t *testing.T) {
 		})
 	}
 }
+
+func assertResponseFields(t *testing.T, ep Endpoint, want []string) {
+	t.Helper()
+	wantSet := make(map[string]bool, len(want))
+	for _, n := range want {
+		wantSet[n] = true
+	}
+	gotSet := make(map[string]bool, len(ep.Response))
+	for _, f := range ep.Response {
+		gotSet[f.Name] = true
+	}
+	for _, n := range want {
+		if !gotSet[n] {
+			t.Errorf("response field %q missing", n)
+		}
+	}
+	for _, f := range ep.Response {
+		if !wantSet[f.Name] {
+			t.Errorf("unexpected response field %q", f.Name)
+		}
+	}
+}
+
+func TestAPIReference_ResponseFieldsComplete(t *testing.T) {
+	cases := []struct {
+		endpoint string
+		fields   []string
+	}{
+		{
+			"GET /open/v1/users/me",
+			[]string{"channelId", "channelName"},
+		},
+		{
+			"GET /open/v1/channels",
+			[]string{"channelId", "channelName", "channelImageUrl", "followerCount", "verifiedMark"},
+		},
+		{
+			"GET /open/v1/channels/streaming-roles",
+			[]string{"managerChannelId", "managerChannelName", "userRole", "createdDate"},
+		},
+		{
+			"GET /open/v1/channels/followers",
+			[]string{"channelId", "channelName", "createdDate"},
+		},
+		{
+			"GET /open/v1/channels/subscribers",
+			[]string{"channelId", "channelName", "month", "tierNo", "createdDate"},
+		},
+		{
+			"GET /open/v1/categories/search",
+			[]string{"categoryType", "categoryId", "categoryValue", "posterImageUrl"},
+		},
+		{
+			"GET /open/v1/lives",
+			[]string{
+				"liveId", "liveTitle", "liveThumbnailImageUrl", "concurrentUserCount",
+				"openDate", "adult", "tags", "categoryType", "liveCategory", "liveCategoryValue",
+				"channelId", "channelName", "channelImageUrl",
+			},
+		},
+		{
+			"GET /open/v1/lives/setting",
+			[]string{"defaultLiveTitle", "tags"},
+		},
+		{
+			"GET /open/v1/chats/settings",
+			[]string{
+				"chatAvailableCondition", "chatAvailableGroup", "minFollowerMinute",
+				"allowSubscriberInFollowerMode", "chatSlowModeSec", "chatEmojiMode",
+			},
+		},
+		{
+			"GET /open/v1/sessions/auth/client",
+			[]string{"webSocketUrl"},
+		},
+		{
+			"GET /open/v1/sessions/auth",
+			[]string{"webSocketUrl"},
+		},
+		{
+			"GET /open/v1/sessions/client",
+			[]string{"sessionKey", "connectedDate", "disconnectedDate", "subscribedEvents"},
+		},
+		{
+			"GET /open/v1/drops/reward-claims",
+			[]string{
+				"claimId", "campaignId", "rewardId", "categoryId", "categoryName",
+				"channelId", "fulfillmentState", "claimedDate", "updatedDate",
+			},
+		},
+		{
+			"GET /open/v1/restrict-channels",
+			[]string{"restrictedChannelId", "restrictedChannelName", "createdDate", "releaseDate"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.endpoint, func(t *testing.T) {
+			ep := mustFindEndpoint(t, tc.endpoint)
+			assertResponseFields(t, ep, tc.fields)
+		})
+	}
+}
