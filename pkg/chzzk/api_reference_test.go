@@ -1,6 +1,9 @@
 package chzzk
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func mustFindEndpoint(t *testing.T, key string) Endpoint {
 	t.Helper()
@@ -38,11 +41,7 @@ func TestAPIReference_UsersMe_HasScope(t *testing.T) {
 
 func TestAPIReference_StreamingRoles_HasResponseFields(t *testing.T) {
 	ep := mustFindEndpoint(t, "GET /open/v1/channels/streaming-roles")
-	for _, field := range []string{"managerChannelId", "managerChannelName", "userRole", "createdDate"} {
-		if _, ok := findResponseField(ep.Response, field); !ok {
-			t.Errorf("response field %q missing", field)
-		}
-	}
+	assertResponseFields(t, ep, []string{"managerChannelId", "managerChannelName", "userRole", "createdDate"})
 }
 
 func TestAPIReference_Lives_HasLiveCategoryValue(t *testing.T) {
@@ -77,6 +76,100 @@ func TestAPIReference_ChatsSettings_HasScope(t *testing.T) {
 			if ep.Scope == "" {
 				t.Errorf("Scope is empty")
 			}
+		})
+	}
+}
+
+func assertResponseFields(t *testing.T, ep Endpoint, want []string) {
+	t.Helper()
+	for _, n := range want {
+		if _, ok := findResponseField(ep.Response, n); !ok {
+			t.Errorf("response field %q missing", n)
+		}
+	}
+	for _, f := range ep.Response {
+		if !slices.Contains(want, f.Name) {
+			t.Errorf("unexpected response field %q", f.Name)
+		}
+	}
+}
+
+func TestAPIReference_ResponseFieldsComplete(t *testing.T) {
+	cases := []struct {
+		endpoint string
+		fields   []string
+	}{
+		{
+			"GET /open/v1/users/me",
+			[]string{"channelId", "channelName"},
+		},
+		{
+			"GET /open/v1/channels",
+			[]string{"channelId", "channelName", "channelImageUrl", "followerCount", "verifiedMark"},
+		},
+		{
+			"GET /open/v1/channels/streaming-roles",
+			[]string{"managerChannelId", "managerChannelName", "userRole", "createdDate"},
+		},
+		{
+			"GET /open/v1/channels/followers",
+			[]string{"channelId", "channelName", "createdDate"},
+		},
+		{
+			"GET /open/v1/channels/subscribers",
+			[]string{"channelId", "channelName", "month", "tierNo", "createdDate"},
+		},
+		{
+			"GET /open/v1/categories/search",
+			[]string{"categoryType", "categoryId", "categoryValue", "posterImageUrl"},
+		},
+		{
+			"GET /open/v1/lives",
+			[]string{
+				"liveId", "liveTitle", "liveThumbnailImageUrl", "concurrentUserCount",
+				"openDate", "adult", "tags", "categoryType", "liveCategory", "liveCategoryValue",
+				"channelId", "channelName", "channelImageUrl",
+			},
+		},
+		{
+			"GET /open/v1/lives/setting",
+			[]string{"defaultLiveTitle", "tags"},
+		},
+		{
+			"GET /open/v1/chats/settings",
+			[]string{
+				"chatAvailableCondition", "chatAvailableGroup", "minFollowerMinute",
+				"allowSubscriberInFollowerMode", "chatSlowModeSec", "chatEmojiMode",
+			},
+		},
+		{
+			"GET /open/v1/sessions/auth/client",
+			[]string{"webSocketUrl"},
+		},
+		{
+			"GET /open/v1/sessions/auth",
+			[]string{"webSocketUrl"},
+		},
+		{
+			"GET /open/v1/sessions/client",
+			[]string{"sessionKey", "connectedDate", "disconnectedDate", "subscribedEvents"},
+		},
+		{
+			"GET /open/v1/drops/reward-claims",
+			[]string{
+				"claimId", "campaignId", "rewardId", "categoryId", "categoryName",
+				"channelId", "fulfillmentState", "claimedDate", "updatedDate",
+			},
+		},
+		{
+			"GET /open/v1/restrict-channels",
+			[]string{"restrictedChannelId", "restrictedChannelName", "createdDate", "releaseDate"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.endpoint, func(t *testing.T) {
+			ep := mustFindEndpoint(t, tc.endpoint)
+			assertResponseFields(t, ep, tc.fields)
 		})
 	}
 }
