@@ -166,8 +166,28 @@ func goMethodForEndpoint(ep Endpoint) string {
 		queryArg = "q"
 	}
 
+	bodyArg := `""`
+	if len(ep.BodyParams) > 0 {
+		needsNilReturn := len(ep.Response) > 0
+		sb.WriteString("\tbodyBytes, err := json.Marshal(struct {\n")
+		for _, p := range ep.BodyParams {
+			sb.WriteString(fmt.Sprintf("\t\t%s %s `json:\"%s\"`\n", goFieldName(p.Name), goType(p.Type), p.Name))
+		}
+		sb.WriteString("\t}{\n")
+		for _, p := range ep.BodyParams {
+			sb.WriteString(fmt.Sprintf("\t\t%s: %s,\n", goFieldName(p.Name), goParamName(p.Name)))
+		}
+		sb.WriteString("\t})\n")
+		if needsNilReturn {
+			sb.WriteString("\tif err != nil {\n\t\treturn nil, err\n\t}\n")
+		} else {
+			sb.WriteString("\tif err != nil {\n\t\treturn err\n\t}\n")
+		}
+		bodyArg = "string(bodyBytes)"
+	}
+
 	if len(ep.Response) == 0 {
-		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, \"\", %v)\n", ep.Method, ep.Path, queryArg, useToken))
+		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, %s, %v)\n", ep.Method, ep.Path, queryArg, bodyArg, useToken))
 		sb.WriteString("\tif err != nil {\n\t\treturn err\n\t}\n")
 		sb.WriteString("\tdefer resp.Body.Close()\n")
 		sb.WriteString("\tif resp.StatusCode != http.StatusOK {\n")
@@ -175,7 +195,7 @@ func goMethodForEndpoint(ep Endpoint) string {
 		sb.WriteString("\t}\n")
 		sb.WriteString("\treturn nil\n")
 	} else {
-		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, \"\", %v)\n", ep.Method, ep.Path, queryArg, useToken))
+		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, %s, %v)\n", ep.Method, ep.Path, queryArg, bodyArg, useToken))
 		sb.WriteString("\tif err != nil {\n\t\treturn nil, err\n\t}\n")
 		sb.WriteString("\tdefer resp.Body.Close()\n\n")
 		sb.WriteString(fmt.Sprintf("\tvar result apiResponse[%sResponse]\n", name))

@@ -111,6 +111,30 @@ func TestHandleGenerateAPIClient_Go(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateAPIClient_Go_BodyParams(t *testing.T) {
+	result, _, err := handleGenerateAPIClient(context.Background(), &mcp.CallToolRequest{}, GenerateAPIClientInput{
+		Language:  "go",
+		Endpoints: []string{"POST /open/v1/chats/send"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("error result: %s", result.Content[0].(*mcp.TextContent).Text)
+	}
+
+	code := result.Content[0].(*mcp.TextContent).Text
+	for _, want := range []string{
+		"json.Marshal",   // body 직렬화
+		`"message"`,      // body 필드 json 태그
+		"string(bodyBytes)", // Marshal 결과를 do()에 전달
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("Go client body serialization missing %q\ngenerated code:\n%s", want, code)
+		}
+	}
+}
+
 func TestHandleGenerateAPIClient_TypeScript(t *testing.T) {
 	for _, lang := range []string{"typescript", "ts"} {
 		result, _, err := handleGenerateAPIClient(context.Background(), &mcp.CallToolRequest{}, GenerateAPIClientInput{
