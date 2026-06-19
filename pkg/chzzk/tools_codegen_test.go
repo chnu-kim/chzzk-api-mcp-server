@@ -112,25 +112,27 @@ func TestHandleGenerateAPIClient_Go(t *testing.T) {
 }
 
 func TestHandleGenerateAPIClient_TypeScript(t *testing.T) {
-	result, _, err := handleGenerateAPIClient(context.Background(), &mcp.CallToolRequest{}, GenerateAPIClientInput{
-		Language:  "typescript",
-		Endpoints: []string{"GET /open/v1/channels"},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.IsError {
-		t.Fatalf("error result: %s", result.Content[0].(*mcp.TextContent).Text)
-	}
+	for _, lang := range []string{"typescript", "ts"} {
+		result, _, err := handleGenerateAPIClient(context.Background(), &mcp.CallToolRequest{}, GenerateAPIClientInput{
+			Language:  lang,
+			Endpoints: []string{"GET /open/v1/channels"},
+		})
+		if err != nil {
+			t.Fatalf("lang=%s: unexpected error: %v", lang, err)
+		}
+		if result.IsError {
+			t.Fatalf("lang=%s: error result: %s", lang, result.Content[0].(*mcp.TextContent).Text)
+		}
 
-	code := result.Content[0].(*mcp.TextContent).Text
-	for _, want := range []string{
-		"ChzzkClient",
-		"BASE_URL",
-		"request",
-	} {
-		if !strings.Contains(code, want) {
-			t.Errorf("TS client missing %q", want)
+		code := result.Content[0].(*mcp.TextContent).Text
+		for _, want := range []string{
+			"ChzzkClient",
+			"BASE_URL",
+			"request",
+		} {
+			if !strings.Contains(code, want) {
+				t.Errorf("lang=%s: TS client missing %q", lang, want)
+			}
 		}
 	}
 }
@@ -161,13 +163,26 @@ func TestHandleGenerateAPIClient_UnknownEndpoint(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateAPIClient_UnsupportedLanguage(t *testing.T) {
+	result, _, err := handleGenerateAPIClient(context.Background(), &mcp.CallToolRequest{}, GenerateAPIClientInput{
+		Language:  "python",
+		Endpoints: []string{"GET /open/v1/lives"},
+	})
+	if err != nil {
+		t.Fatal("handler should not error")
+	}
+	if !result.IsError {
+		t.Error("expected IsError=true for unsupported language")
+	}
+}
+
 // ─── chzzk_scaffold_project ───────────────────────────────────────────────────
 
 func TestHandleScaffoldProject_Go(t *testing.T) {
 	result, _, err := handleScaffoldProject(context.Background(), &mcp.CallToolRequest{}, ScaffoldProjectInput{
 		Language:    "go",
 		ProjectName: "my-bot",
-		Features:    []string{"auth", "live", "chat"},
+		Features:    []string{"auth", "live", "chat", "channel", "session"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -184,6 +199,9 @@ func TestHandleScaffoldProject_Go(t *testing.T) {
 		"CHZZK_CLIENT_ID",
 		"auth/",
 		"live/",
+		"chat/",
+		"channel/",
+		"session/",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("Go scaffold missing %q", want)
