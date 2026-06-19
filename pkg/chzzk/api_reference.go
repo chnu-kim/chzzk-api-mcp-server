@@ -280,10 +280,6 @@ var AllEndpoints = []Endpoint{
 		Scope:       "방송 설정 조회",
 		Response: []ResponseField{
 			{Name: "defaultLiveTitle", Type: "string", Description: "기본 방송 제목"},
-			{Name: "category.categoryType", Type: "string", Description: "카테고리 타입 (GAME | SPORTS | ETC)"},
-			{Name: "category.categoryId", Type: "string", Description: "카테고리 ID"},
-			{Name: "category.categoryValue", Type: "string", Description: "카테고리 이름"},
-			{Name: "category.posterImageUrl", Type: "string", Description: "카테고리 포스터 이미지 URL"},
 			{Name: "tags", Type: "string[]", Description: "태그 목록"},
 		},
 	},
