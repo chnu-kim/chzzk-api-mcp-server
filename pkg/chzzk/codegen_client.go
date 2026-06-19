@@ -90,8 +90,9 @@ func goMethodForEndpoint(ep Endpoint) string {
 	var sb strings.Builder
 	name := goMethodName(ep)
 	useToken := ep.AuthType == AuthTypeAccessToken
+	hasResponse := len(ep.Response) > 0
 
-	if len(ep.Response) > 0 {
+	if hasResponse {
 		sb.WriteString(fmt.Sprintf("// %s is the response from %s %s.\n", name+"Response", ep.Method, ep.Path))
 		sb.WriteString(fmt.Sprintf("type %sResponse struct {\n", name))
 		for _, r := range ep.Response {
@@ -127,7 +128,7 @@ func goMethodForEndpoint(ep Endpoint) string {
 	params = append(params, optParams...)
 
 	retType := "error"
-	if len(ep.Response) > 0 {
+	if hasResponse {
 		retType = fmt.Sprintf("(*%sResponse, error)", name)
 	}
 
@@ -166,8 +167,28 @@ func goMethodForEndpoint(ep Endpoint) string {
 		queryArg = "q"
 	}
 
-	if len(ep.Response) == 0 {
-		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, \"\", %v)\n", ep.Method, ep.Path, queryArg, useToken))
+	hasBody := len(ep.BodyParams) > 0
+	bodyArg := `""`
+	if hasBody {
+		sb.WriteString("\tbodyBytes, err := json.Marshal(struct {\n")
+		for _, p := range ep.BodyParams {
+			sb.WriteString(fmt.Sprintf("\t\t%s %s `json:\"%s\"`\n", goFieldName(p.Name), goType(p.Type), p.Name))
+		}
+		sb.WriteString("\t}{\n")
+		for _, p := range ep.BodyParams {
+			sb.WriteString(fmt.Sprintf("\t\t%s: %s,\n", goFieldName(p.Name), goParamName(p.Name)))
+		}
+		sb.WriteString("\t})\n")
+		if hasResponse {
+			sb.WriteString("\tif err != nil {\n\t\treturn nil, err\n\t}\n")
+		} else {
+			sb.WriteString("\tif err != nil {\n\t\treturn err\n\t}\n")
+		}
+		bodyArg = "string(bodyBytes)"
+	}
+
+	if !hasResponse {
+		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, %s, %v)\n", ep.Method, ep.Path, queryArg, bodyArg, useToken))
 		sb.WriteString("\tif err != nil {\n\t\treturn err\n\t}\n")
 		sb.WriteString("\tdefer resp.Body.Close()\n")
 		sb.WriteString("\tif resp.StatusCode != http.StatusOK {\n")
@@ -175,7 +196,7 @@ func goMethodForEndpoint(ep Endpoint) string {
 		sb.WriteString("\t}\n")
 		sb.WriteString("\treturn nil\n")
 	} else {
-		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, \"\", %v)\n", ep.Method, ep.Path, queryArg, useToken))
+		sb.WriteString(fmt.Sprintf("\tresp, err := c.do(ctx, %q, %q, %s, %s, %v)\n", ep.Method, ep.Path, queryArg, bodyArg, useToken))
 		sb.WriteString("\tif err != nil {\n\t\treturn nil, err\n\t}\n")
 		sb.WriteString("\tdefer resp.Body.Close()\n\n")
 		sb.WriteString(fmt.Sprintf("\tvar result apiResponse[%sResponse]\n", name))
