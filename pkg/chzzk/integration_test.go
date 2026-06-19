@@ -40,6 +40,7 @@ func TestIntegration_ListTools(t *testing.T) {
 		"chzzk_generate_auth_code",
 		"chzzk_generate_api_client",
 		"chzzk_scaffold_project",
+		"chzzk_generate_websocket_client",
 	}
 	got := make(map[string]bool, len(res.Tools))
 	for _, tool := range res.Tools {
@@ -135,6 +136,44 @@ func TestIntegration_CallTool_ScaffoldProject(t *testing.T) {
 			"language":     "go",
 			"project_name": "test-bot",
 			"features":     []any{"auth", "live"},
+		},
+	})
+	if err != nil {
+		t.Fatal("CallTool:", err)
+	}
+	if result.IsError {
+		text := result.Content[0].(*mcp.TextContent).Text
+		t.Fatalf("unexpected IsError=true: %s", text)
+	}
+}
+
+func TestIntegration_CallTool_GenerateWebSocketClient_Go(t *testing.T) {
+	cs := connectIntegration(t)
+
+	result, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "chzzk_generate_websocket_client",
+		Arguments: map[string]any{
+			"language": "go",
+			"events":   []any{"chat", "donation"},
+		},
+	})
+	if err != nil {
+		t.Fatal("CallTool:", err)
+	}
+	if result.IsError {
+		text := result.Content[0].(*mcp.TextContent).Text
+		t.Fatalf("unexpected IsError=true: %s", text)
+	}
+}
+
+func TestIntegration_CallTool_GenerateWebSocketClient_TypeScript(t *testing.T) {
+	cs := connectIntegration(t)
+
+	result, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "chzzk_generate_websocket_client",
+		Arguments: map[string]any{
+			"language": "typescript",
+			"events":   []any{"chat"},
 		},
 	})
 	if err != nil {

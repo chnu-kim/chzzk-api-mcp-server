@@ -266,6 +266,182 @@ func TestHandleScaffoldProject_UnsupportedLanguage(t *testing.T) {
 	}
 }
 
+// ─── chzzk_generate_websocket_client ──────────────────────────────────────────
+
+func TestHandleGenerateWebSocketClient_Go_Chat(t *testing.T) {
+	result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+		Language: "go",
+		Events:   []string{"chat"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", result.Content[0].(*mcp.TextContent).Text)
+	}
+
+	code := result.Content[0].(*mcp.TextContent).Text
+	for _, want := range []string{
+		"gorilla/websocket",
+		"/open/v1/sessions/auth",
+		"/open/v1/sessions/events/subscribe/chat",
+		"ReadMessage",
+		"CHZZK_ACCESS_TOKEN",
+		"webSocketUrl",
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("Go WS client (chat) missing %q", want)
+		}
+	}
+	// donation 구독 코드는 없어야 함
+	if strings.Contains(code, "/open/v1/sessions/events/subscribe/donation") {
+		t.Error("Go WS client (chat only) should not contain donation subscription")
+	}
+}
+
+func TestHandleGenerateWebSocketClient_Go_Donation(t *testing.T) {
+	result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+		Language: "go",
+		Events:   []string{"donation"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected error result: %s", result.Content[0].(*mcp.TextContent).Text)
+	}
+
+	code := result.Content[0].(*mcp.TextContent).Text
+	if !strings.Contains(code, "/open/v1/sessions/events/subscribe/donation") {
+		t.Error("Go WS client (donation) missing donation subscription")
+	}
+	if strings.Contains(code, "/open/v1/sessions/events/subscribe/chat") {
+		t.Error("Go WS client (donation only) should not contain chat subscription")
+	}
+}
+
+func TestHandleGenerateWebSocketClient_Go_ChatAndDonation(t *testing.T) {
+	result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+		Language: "go",
+		Events:   []string{"chat", "donation"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("error: %s", result.Content[0].(*mcp.TextContent).Text)
+	}
+
+	code := result.Content[0].(*mcp.TextContent).Text
+	for _, want := range []string{
+		"/open/v1/sessions/events/subscribe/chat",
+		"/open/v1/sessions/events/subscribe/donation",
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("Go WS client (chat+donation) missing %q", want)
+		}
+	}
+}
+
+func TestHandleGenerateWebSocketClient_Go_EmptyEventsDefaultsToAll(t *testing.T) {
+	result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+		Language: "go",
+		Events:   []string{},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("error: %s", result.Content[0].(*mcp.TextContent).Text)
+	}
+
+	code := result.Content[0].(*mcp.TextContent).Text
+	for _, want := range []string{
+		"/open/v1/sessions/events/subscribe/chat",
+		"/open/v1/sessions/events/subscribe/donation",
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("Go WS client (empty events) missing %q", want)
+		}
+	}
+}
+
+func TestHandleGenerateWebSocketClient_TypeScript(t *testing.T) {
+	for _, lang := range []string{"typescript", "ts"} {
+		result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+			Language: lang,
+			Events:   []string{"chat", "donation"},
+		})
+		if err != nil {
+			t.Fatalf("lang=%s: unexpected error: %v", lang, err)
+		}
+		if result.IsError {
+			t.Fatalf("lang=%s: error result", lang)
+		}
+
+		code := result.Content[0].(*mcp.TextContent).Text
+		for _, want := range []string{
+			"WebSocket",
+			"/open/v1/sessions/auth",
+			"/open/v1/sessions/events/subscribe/chat",
+			"/open/v1/sessions/events/subscribe/donation",
+			"CHZZK_ACCESS_TOKEN",
+			"webSocketUrl",
+		} {
+			if !strings.Contains(code, want) {
+				t.Errorf("lang=%s: TS WS client missing %q", lang, want)
+			}
+		}
+	}
+}
+
+func TestHandleGenerateWebSocketClient_TypeScript_ChatOnly(t *testing.T) {
+	result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+		Language: "typescript",
+		Events:   []string{"chat"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("error: %s", result.Content[0].(*mcp.TextContent).Text)
+	}
+
+	code := result.Content[0].(*mcp.TextContent).Text
+	if !strings.Contains(code, "/open/v1/sessions/events/subscribe/chat") {
+		t.Error("TS WS client (chat) missing chat subscription")
+	}
+	if strings.Contains(code, "/open/v1/sessions/events/subscribe/donation") {
+		t.Error("TS WS client (chat only) should not contain donation subscription")
+	}
+}
+
+func TestHandleGenerateWebSocketClient_InvalidEvent(t *testing.T) {
+	result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+		Language: "go",
+		Events:   []string{"unknown_event"},
+	})
+	if err != nil {
+		t.Fatal("handler should not error")
+	}
+	if !result.IsError {
+		t.Error("expected IsError=true for unknown event")
+	}
+}
+
+func TestHandleGenerateWebSocketClient_UnsupportedLanguage(t *testing.T) {
+	result, _, err := handleGenerateWebSocketClient(context.Background(), &mcp.CallToolRequest{}, GenerateWebSocketClientInput{
+		Language: "python",
+		Events:   []string{"chat"},
+	})
+	if err != nil {
+		t.Fatal("handler should not error")
+	}
+	if !result.IsError {
+		t.Error("expected IsError=true for unsupported language")
+	}
+}
+
 // ─── api_reference helpers ────────────────────────────────────────────────────
 
 func TestFindEndpoint(t *testing.T) {
