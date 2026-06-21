@@ -60,14 +60,14 @@ func TestInitialize(t *testing.T) {
 	}
 }
 
-// TestListTools — 5개 도구가 모두 등록되어 있는지 검증.
+// TestListTools — 6개 도구가 모두 등록되어 있는지 검증.
 func TestListTools(t *testing.T) {
 	session := connect(t)
 	res, err := session.ListTools(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("ListTools: %v", err)
 	}
-	const want = 5
+	const want = 6
 	if len(res.Tools) != want {
 		t.Errorf("tool count = %d, want %d", len(res.Tools), want)
 	}
